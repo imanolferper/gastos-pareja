@@ -93,6 +93,8 @@
         .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 17px 18px 0; }
         .panel-heading h3 { margin: 0; font-size: 14px; }
         .panel-heading span { color: var(--muted); font-size: 11px; }
+        .chart-wide { grid-column: 1 / -1; }
+        .category-filter { width: min(180px, 48%); min-height: 36px; padding: 6px 9px; font-size: 12px; }
         .chart-wrap { position: relative; height: 270px; padding: 14px 16px 16px; }
         .lower-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(275px, .8fr); gap: 14px; align-items: start; }
         .table-wrap { overflow-x: auto; }
@@ -176,6 +178,10 @@
             <section class="charts" aria-label="Gráficos anuales">
                 <article class="panel"><div class="panel-heading"><h3>Evolución mes a mes</h3><span>Total mensual</span></div><div class="chart-wrap"><canvas id="monthly-chart" aria-label="Gasto total de cada mes"></canvas></div></article>
                 <article class="panel"><div class="panel-heading"><h3>Gasto por categoría</h3><span>Acumulado del año</span></div><div class="chart-wrap"><canvas id="category-chart" aria-label="Distribución anual por categoría"></canvas></div></article>
+                <article class="panel chart-wide">
+                    <div class="panel-heading"><h3>Evolución mensual por categoría</h3><select class="category-filter" id="category-month-select" aria-label="Categoría para ver su evolución mensual"></select></div>
+                    <div class="chart-wrap"><canvas id="category-monthly-chart" aria-label="Gasto mensual de la categoría seleccionada"></canvas></div>
+                </article>
             </section>
 
             <section class="lower-grid">
@@ -227,13 +233,18 @@
         const categories = ['Iberdrola', 'Vodafone', 'Comunidad', 'Eguzkilore', 'Agua fría', 'Otros'];
         const colors = ['#285c48', '#d77743', '#6089a2', '#c5a137', '#738c5a', '#a16c87'];
         const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        const LAST_ALLOWED_YEAR = 2032;
         const euro = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' });
         const $ = (id) => document.getElementById(id);
         let records = [];
         let monthlyChart;
         let categoryChart;
+        let categoryMonthlyChart;
 
         categories.forEach((category) => $('expense-category').add(new Option(category, category)));
+        categories.forEach((category) => $('category-month-select').add(new Option(category, category)));
+        $('expense-month').min = `${currentYear() - 1}-01`;
+        $('expense-month').max = `${LAST_ALLOWED_YEAR}-12`;
 
         function showConnection(message, isError = false) {
             $('connection').textContent = message;
@@ -255,7 +266,8 @@
         }
 
         function setupYearOptions() {
-            const available = new Set([currentYear(), currentYear() - 1]);
+            const available = new Set();
+            for (let year = currentYear() - 1; year <= LAST_ALLOWED_YEAR; year += 1) available.add(year);
             records.forEach((record) => available.add(Number(record.mes.slice(0, 4))));
             const years = [...available].sort((a, b) => b - a);
             $('year-select').replaceChildren(...years.map((year) => new Option(String(year), String(year))));
@@ -284,6 +296,7 @@
             $('top-month').textContent = biggestMonthTotal ? months[biggestMonth] : '--';
             $('top-month-total').textContent = biggestMonthTotal ? euro.format(biggestMonthTotal) : 'Todavía sin datos';
             renderCharts(totalsByMonth, totalsByCategory);
+            renderCategoryMonthlyChart(yearRecords);
             renderRows(yearRecords);
             renderCategories(totalsByCategory, total);
         }
@@ -300,6 +313,23 @@
                 type: 'doughnut',
                 data: { labels: categories, datasets: [{ data: categories.map((category) => totalsByCategory[category]), backgroundColor: colors, borderWidth: 2, borderColor: '#fffefa', hoverOffset: 5 }] },
                 options: { maintainAspectRatio: false, cutout: '66%', plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 7, padding: 14, font: { size: 11 } } }, tooltip: { callbacks: { label: (context) => `${context.label}: ${euro.format(context.raw)}` } } } }
+            });
+        }
+
+        function renderCategoryMonthlyChart(yearRecords) {
+            const selectedCategory = $('category-month-select').value;
+            const categoryIndex = categories.indexOf(selectedCategory);
+            const monthlyTotals = Array(12).fill(0);
+            yearRecords.forEach((record) => {
+                if (record.categoria === selectedCategory) {
+                    monthlyTotals[Number(record.mes.slice(5, 7)) - 1] += Number(record.importe);
+                }
+            });
+            categoryMonthlyChart?.destroy();
+            categoryMonthlyChart = new Chart($('category-monthly-chart'), {
+                type: 'line',
+                data: { labels: months.map((month) => month.slice(0, 3)), datasets: [{ label: selectedCategory, data: monthlyTotals, borderColor: colors[categoryIndex], backgroundColor: `${colors[categoryIndex]}22`, fill: true, tension: 0.25, pointRadius: 4, pointHoverRadius: 6 }] },
+                options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (context) => euro.format(context.raw) } } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { callback: (value) => `${value} €` } } } }
             });
         }
 
@@ -410,12 +440,16 @@
         });
         $('cancel-expense').addEventListener('click', () => closeDialog('expense-dialog'));
         $('year-select').addEventListener('change', render);
+        $('category-month-select').addEventListener('change', () => {
+            const year = Number($('year-select').value);
+            renderCategoryMonthlyChart(records.filter((record) => Number(record.mes.slice(0, 4)) === year));
+        });
         $('expense-form').addEventListener('submit', async (event) => {
             event.preventDefault();
             $('expense-message').textContent = '';
             const month = $('expense-month').value;
             const amount = Number($('expense-amount').value);
-            if (!month || !Number.isFinite(amount) || amount <= 0) { $('expense-message').textContent = 'Indica un mes y un importe válido.'; return; }
+            if (!month || month < $('expense-month').min || month > $('expense-month').max || !Number.isFinite(amount) || amount <= 0) { $('expense-message').textContent = 'Indica un mes entre enero del año pasado y diciembre de 2032, y un importe válido.'; return; }
             const { error } = await supabase.from('gastos').insert({
                 mes: `${month}-01`,
                 categoria: $('expense-category').value,
