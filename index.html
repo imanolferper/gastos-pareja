@@ -3,30 +3,434 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f5f4ee">
+    <title>Gastos de casa</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            color-scheme: light;
+            --ink: #202922;
+            --muted: #69736c;
+            --paper: #f5f4ee;
+            --surface: #fffefa;
+            --line: #e3e5dc;
+            --green: #285c48;
+            --green-soft: #e2eee6;
+            --orange: #d77743;
+            --red: #a33b32;
+            --radius: 12px;
+        }
 
-    <title>Gastos Pareja</title>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: var(--paper);
+            color: var(--ink);
+            font-family: "Aptos", "Segoe UI", sans-serif;
+            font-size: 15px;
+        }
+        button, input, select { font: inherit; }
+        button { cursor: pointer; }
+        .shell { max-width: 1180px; margin: 0 auto; padding: 28px 28px 52px; }
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--line);
+        }
+        .brand { display: flex; align-items: center; gap: 13px; }
+        .brand-mark {
+            display: grid;
+            width: 42px;
+            height: 42px;
+            place-items: center;
+            border-radius: 12px;
+            background: var(--green);
+            color: white;
+            font-size: 21px;
+        }
+        .eyebrow { margin: 0 0 4px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: 1.1px; text-transform: uppercase; }
+        h1 { margin: 0; font-size: 22px; line-height: 1.2; }
+        .header-actions { display: flex; align-items: center; gap: 14px; }
+        #connection { color: var(--muted); font-size: 12px; }
+        .quiet-button, .primary-button, .delete-button {
+            min-height: 40px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: var(--surface);
+            color: var(--ink);
+            padding: 0 14px;
+        }
+        .primary-button { border-color: var(--green); background: var(--green); color: white; font-weight: 700; }
+        .quiet-button:hover, .delete-button:hover { border-color: var(--green); }
+        .primary-button:hover { background: #1f4938; }
+        main { padding-top: 25px; }
+        .toolbar { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+        .section-title { margin: 0 0 5px; font-size: 18px; }
+        .subline { margin: 0; color: var(--muted); font-size: 13px; }
+        .year-picker { display: flex; align-items: center; gap: 8px; }
+        .year-picker label { color: var(--muted); font-size: 12px; }
+        input, select {
+            width: 100%;
+            min-height: 42px;
+            border: 1px solid #d7dbd1;
+            border-radius: 7px;
+            background: white;
+            color: var(--ink);
+            padding: 9px 11px;
+        }
+        input:focus, select:focus { outline: 2px solid #a8c9b3; outline-offset: 1px; }
+        .year-picker select { width: 106px; }
+        .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+        .metric { min-height: 116px; padding: 18px 19px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+        .metric-label { display: block; color: var(--muted); font-size: 12px; }
+        .metric-value { display: block; margin-top: 11px; font-size: 28px; font-weight: 700; line-height: 1; }
+        .metric-detail { display: block; margin-top: 9px; color: var(--muted); font-size: 12px; }
+        .charts { display: grid; grid-template-columns: 1.35fr 1fr; gap: 14px; margin-bottom: 14px; }
+        .panel { min-width: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+        .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 17px 18px 0; }
+        .panel-heading h3 { margin: 0; font-size: 14px; }
+        .panel-heading span { color: var(--muted); font-size: 11px; }
+        .chart-wrap { position: relative; height: 270px; padding: 14px 16px 16px; }
+        .lower-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(275px, .8fr); gap: 14px; align-items: start; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 13px 16px; border-top: 1px solid #edf0e9; white-space: nowrap; }
+        th { color: var(--muted); font-size: 11px; font-weight: 600; }
+        td { font-size: 13px; }
+        td.amount { font-weight: 700; }
+        .cadence { display: inline-block; border-radius: 20px; background: var(--green-soft); color: var(--green); padding: 5px 8px; font-size: 11px; }
+        .cadence.quarterly { background: #f7e9dc; color: #8c4b26; }
+        .empty { padding: 24px 16px; color: var(--muted); text-align: center; }
+        .delete-button { min-height: 30px; padding: 0 8px; color: var(--red); font-size: 12px; }
+        .category-list { padding: 6px 18px 15px; }
+        .category-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding: 12px 0; border-top: 1px solid #edf0e9; }
+        .category-row:first-child { border-top: 0; }
+        .category-name { display: flex; align-items: center; gap: 9px; font-size: 13px; }
+        .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--dot); }
+        .category-amount { font-size: 13px; font-weight: 700; text-align: right; }
+        .category-share { grid-column: 1 / -1; height: 4px; border-radius: 4px; background: #edf0e9; }
+        .category-share span { display: block; height: 100%; border-radius: inherit; background: var(--dot); }
+        .dialog-backdrop { position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; overflow-y: auto; background: #17231dcc; padding: 18px; }
+        .dialog { width: min(100%, 470px); border-radius: 12px; background: var(--surface); padding: 23px; box-shadow: 0 24px 80px #1118; }
+        .dialog h2 { margin: 0 0 6px; font-size: 20px; }
+        .dialog-copy { margin: 0 0 20px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+        .field { display: grid; gap: 6px; }
+        .field.full { grid-column: 1 / -1; }
+        .field label { color: #4f5a52; font-size: 12px; font-weight: 600; }
+        .dialog-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 20px; }
+        .message { min-height: 18px; margin: 10px 0 0; color: var(--red); font-size: 12px; }
+        [hidden] { display: none !important; }
+        @media (max-width: 760px) {
+            .shell { padding: 18px 16px 36px; }
+            header { align-items: flex-start; }
+            .header-actions { flex-direction: column-reverse; align-items: flex-end; gap: 7px; }
+            #connection { max-width: 130px; text-align: right; }
+            .metrics { grid-template-columns: 1fr 1fr; }
+            .metric:first-child { grid-column: 1 / -1; }
+            .metric { min-height: 100px; padding: 15px; }
+            .metric-value { font-size: 24px; }
+            .charts, .lower-grid { grid-template-columns: 1fr; }
+            .chart-wrap { height: 245px; }
+            .toolbar { align-items: flex-start; flex-direction: column; }
+            .year-picker { align-self: flex-end; }
+        }
+        @media (max-width: 420px) {
+            h1 { font-size: 18px; }
+            .brand-mark { width: 37px; height: 37px; }
+            .quiet-button { min-height: 36px; padding: 0 10px; font-size: 12px; }
+            th, td { padding: 11px 10px; }
+            .form-grid { grid-template-columns: 1fr; }
+            .field.full { grid-column: auto; }
+        }
+    </style>
 </head>
-
 <body>
+    <div class="shell">
+        <header>
+            <div class="brand">
+                <span class="brand-mark" aria-hidden="true">€</span>
+                <div><p class="eyebrow">Casa · cuentas claras</p><h1>Gastos compartidos</h1></div>
+            </div>
+            <div class="header-actions">
+                <span id="connection" role="status">Comprobando conexión...</span>
+                <button class="quiet-button" id="sign-out" type="button" hidden>Cerrar sesión</button>
+            </div>
+        </header>
 
-    <h1>Gastos de pareja</h1>
+        <main id="dashboard" hidden>
+            <section class="toolbar" aria-label="Periodo del informe">
+                <div><h2 class="section-title">Resumen de gastos</h2><p class="subline" id="period-caption"></p></div>
+                <div class="year-picker"><label for="year-select">Año</label><select id="year-select" aria-label="Seleccionar año"></select></div>
+            </section>
 
-    <p id="estado">Conectando con Supabase...</p>
+            <section class="metrics" aria-label="Totales">
+                <article class="metric"><span class="metric-label">Total del año</span><strong class="metric-value" id="year-total">0,00 €</strong><span class="metric-detail" id="year-count">Sin gastos registrados</span></article>
+                <article class="metric"><span class="metric-label">Media mensual</span><strong class="metric-value" id="monthly-average">0,00 €</strong><span class="metric-detail">Sobre los 12 meses del año</span></article>
+                <article class="metric"><span class="metric-label">Mes con más gasto</span><strong class="metric-value" id="top-month">--</strong><span class="metric-detail" id="top-month-total">Todavía sin datos</span></article>
+            </section>
+
+            <section class="charts" aria-label="Gráficos anuales">
+                <article class="panel"><div class="panel-heading"><h3>Evolución mes a mes</h3><span>Total mensual</span></div><div class="chart-wrap"><canvas id="monthly-chart" aria-label="Gasto total de cada mes"></canvas></div></article>
+                <article class="panel"><div class="panel-heading"><h3>Gasto por categoría</h3><span>Acumulado del año</span></div><div class="chart-wrap"><canvas id="category-chart" aria-label="Distribución anual por categoría"></canvas></div></article>
+            </section>
+
+            <section class="lower-grid">
+                <article class="panel">
+                    <div class="panel-heading"><h3>Movimientos del año</h3><button class="primary-button" id="open-expense" type="button">+ Añadir gasto</button></div>
+                    <div class="table-wrap"><table><thead><tr><th>Mes</th><th>Gasto</th><th>Frecuencia</th><th>Importe</th><th></th></tr></thead><tbody id="expense-rows"></tbody></table></div>
+                    <p class="empty" id="empty-expenses" hidden>No hay gastos este año. Añade uno para empezar el histórico.</p>
+                </article>
+                <article class="panel"><div class="panel-heading"><h3>Desglose</h3><span>Por categoría</span></div><div class="category-list" id="category-list"></div></article>
+            </section>
+        </main>
+    </div>
+
+    <div class="dialog-backdrop" id="login-dialog" hidden>
+        <form class="dialog" id="login-form">
+            <h2>Entrar en la cuenta</h2>
+            <p class="dialog-copy">Inicia sesión con el usuario que hayas creado en Supabase.</p>
+            <div class="form-grid">
+                <div class="field full"><label for="login-email">Correo electrónico</label><input id="login-email" type="email" autocomplete="username" required></div>
+                <div class="field full"><label for="login-password">Contraseña</label><input id="login-password" type="password" autocomplete="current-password" required></div>
+            </div>
+            <p class="message" id="login-message" role="alert"></p>
+            <div class="dialog-actions"><button class="primary-button" type="submit">Iniciar sesión</button></div>
+        </form>
+    </div>
+
+    <div class="dialog-backdrop" id="expense-dialog" hidden>
+        <form class="dialog" id="expense-form">
+            <h2>Añadir gasto</h2>
+            <p class="dialog-copy">Puedes registrar gastos de este año o de años anteriores.</p>
+            <div class="form-grid">
+                <div class="field"><label for="expense-month">Mes</label><input id="expense-month" type="month" required></div>
+                <div class="field"><label for="expense-category">Categoría</label><select id="expense-category" required></select></div>
+                <div class="field"><label for="expense-amount">Importe (€)</label><input id="expense-amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="0,00" required></div>
+                <div class="field"><label for="expense-frequency">Frecuencia</label><select id="expense-frequency"><option value="mensual">Mensual</option><option value="trimestral">Trimestral</option><option value="anual">Anual</option><option value="puntual">Puntual</option></select></div>
+                <div class="field full"><label for="expense-notes">Nota (opcional)</label><input id="expense-notes" maxlength="180" placeholder="Por ejemplo, factura de marzo"></div>
+            </div>
+            <p class="message" id="expense-message" role="alert"></p>
+            <div class="dialog-actions"><button class="quiet-button" id="cancel-expense" type="button">Cancelar</button><button class="primary-button" type="submit">Guardar gasto</button></div>
+        </form>
+    </div>
 
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-        const SUPABASE_URL = 'https://mgbipimawgtxswycerrd.supabase.co/rest/v1/';
+        const SUPABASE_URL = 'https://mgbipimawgtxswycerrd.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_ghK9V5uMaHZMaBmy_5ZsJw_3C0Aeeg-';
+        const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+        const categories = ['Iberdrola', 'Vodafone', 'Comunidad', 'Eguzkilore', 'Agua fría', 'Otros'];
+        const colors = ['#285c48', '#d77743', '#6089a2', '#c5a137', '#738c5a', '#a16c87'];
+        const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        const euro = new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' });
+        const $ = (id) => document.getElementById(id);
+        let records = [];
+        let monthlyChart;
+        let categoryChart;
 
-        const supabase = createClient(
-            SUPABASE_URL,
-            SUPABASE_KEY
-        );
+        categories.forEach((category) => $('expense-category').add(new Option(category, category)));
 
-        document.getElementById('estado').textContent =
-            'Supabase conectado correctamente 🚀';
+        function showConnection(message, isError = false) {
+            $('connection').textContent = message;
+            $('connection').style.color = isError ? 'var(--red)' : 'var(--muted)';
+        }
+
+        function currentYear() { return new Date().getFullYear(); }
+
+        async function loadRecords() {
+            const { data, error } = await supabase.from('gastos').select('id, mes, categoria, importe, frecuencia, notas').order('mes', { ascending: false });
+            if (error) {
+                showConnection(error.message.includes('gastos') ? 'Falta configurar la tabla gastos' : 'No se pudieron cargar los gastos', true);
+                console.error('Error al cargar gastos:', error.message);
+                return;
+            }
+            records = data ?? [];
+            showConnection('Conectado · datos sincronizados');
+            render();
+        }
+
+        function setupYearOptions() {
+            const available = new Set([currentYear(), currentYear() - 1]);
+            records.forEach((record) => available.add(Number(record.mes.slice(0, 4))));
+            const years = [...available].sort((a, b) => b - a);
+            $('year-select').replaceChildren(...years.map((year) => new Option(String(year), String(year))));
+            if (!years.includes(Number($('year-select').value))) $('year-select').value = String(currentYear());
+        }
+
+        function render() {
+            setupYearOptions();
+            const year = Number($('year-select').value);
+            const yearRecords = records.filter((record) => Number(record.mes.slice(0, 4)) === year);
+            const totalsByMonth = Array(12).fill(0);
+            const totalsByCategory = Object.fromEntries(categories.map((category) => [category, 0]));
+            yearRecords.forEach((record) => {
+                const amount = Number(record.importe);
+                totalsByMonth[Number(record.mes.slice(5, 7)) - 1] += amount;
+                totalsByCategory[record.categoria] = (totalsByCategory[record.categoria] ?? 0) + amount;
+            });
+            const total = yearRecords.reduce((sum, record) => sum + Number(record.importe), 0);
+            const biggestMonthTotal = Math.max(...totalsByMonth);
+            const biggestMonth = totalsByMonth.indexOf(biggestMonthTotal);
+
+            $('period-caption').textContent = `Histórico de enero a diciembre de ${year}`;
+            $('year-total').textContent = euro.format(total);
+            $('year-count').textContent = `${yearRecords.length} ${yearRecords.length === 1 ? 'gasto registrado' : 'gastos registrados'}`;
+            $('monthly-average').textContent = euro.format(total / 12);
+            $('top-month').textContent = biggestMonthTotal ? months[biggestMonth] : '--';
+            $('top-month-total').textContent = biggestMonthTotal ? euro.format(biggestMonthTotal) : 'Todavía sin datos';
+            renderCharts(totalsByMonth, totalsByCategory);
+            renderRows(yearRecords);
+            renderCategories(totalsByCategory, total);
+        }
+
+        function renderCharts(totalsByMonth, totalsByCategory) {
+            monthlyChart?.destroy();
+            categoryChart?.destroy();
+            monthlyChart = new Chart($('monthly-chart'), {
+                type: 'bar',
+                data: { labels: months.map((month) => month.slice(0, 3)), datasets: [{ data: totalsByMonth, backgroundColor: '#6b9a7c', hoverBackgroundColor: '#285c48', borderRadius: 4, maxBarThickness: 32 }] },
+                options: { maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: (context) => euro.format(context.raw) } } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { callback: (value) => `${value} €` } } } }
+            });
+            categoryChart = new Chart($('category-chart'), {
+                type: 'doughnut',
+                data: { labels: categories, datasets: [{ data: categories.map((category) => totalsByCategory[category]), backgroundColor: colors, borderWidth: 2, borderColor: '#fffefa', hoverOffset: 5 }] },
+                options: { maintainAspectRatio: false, cutout: '66%', plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 7, padding: 14, font: { size: 11 } } }, tooltip: { callbacks: { label: (context) => `${context.label}: ${euro.format(context.raw)}` } } } }
+            });
+        }
+
+        function renderRows(yearRecords) {
+            const sorted = [...yearRecords].sort((a, b) => b.mes.localeCompare(a.mes) || a.categoria.localeCompare(b.categoria));
+            $('expense-rows').replaceChildren(...sorted.map((record) => {
+                const row = document.createElement('tr');
+                const monthCell = document.createElement('td');
+                monthCell.textContent = `${months[Number(record.mes.slice(5, 7)) - 1]} ${record.mes.slice(0, 4)}`;
+                const categoryCell = document.createElement('td');
+                categoryCell.textContent = record.categoria;
+                if (record.notas) categoryCell.title = record.notas;
+                const cadenceCell = document.createElement('td');
+                const badge = document.createElement('span');
+                badge.className = `cadence${record.frecuencia === 'trimestral' ? ' quarterly' : ''}`;
+                badge.textContent = record.frecuencia;
+                cadenceCell.append(badge);
+                const amountCell = document.createElement('td');
+                amountCell.className = 'amount';
+                amountCell.textContent = euro.format(Number(record.importe));
+                const actionCell = document.createElement('td');
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.className = 'delete-button';
+                remove.textContent = 'Eliminar';
+                remove.setAttribute('aria-label', `Eliminar ${record.categoria} de ${monthCell.textContent}`);
+                remove.addEventListener('click', () => deleteRecord(record.id));
+                actionCell.append(remove);
+                row.append(monthCell, categoryCell, cadenceCell, amountCell, actionCell);
+                return row;
+            }));
+            $('empty-expenses').hidden = sorted.length > 0;
+        }
+
+        function renderCategories(totalsByCategory, total) {
+            $('category-list').replaceChildren(...categories.map((category, index) => {
+                const amount = totalsByCategory[category] ?? 0;
+                const row = document.createElement('div');
+                row.className = 'category-row';
+                const name = document.createElement('span');
+                name.className = 'category-name';
+                const dot = document.createElement('i');
+                dot.className = 'dot';
+                dot.style.setProperty('--dot', colors[index]);
+                name.append(dot, document.createTextNode(category));
+                const value = document.createElement('span');
+                value.className = 'category-amount';
+                value.textContent = euro.format(amount);
+                const bar = document.createElement('div');
+                bar.className = 'category-share';
+                const fill = document.createElement('span');
+                fill.style.width = `${total ? amount / total * 100 : 0}%`;
+                fill.style.setProperty('--dot', colors[index]);
+                bar.append(fill);
+                row.append(name, value, bar);
+                return row;
+            }));
+        }
+
+        async function deleteRecord(id) {
+            if (!window.confirm('¿Eliminar este gasto del histórico?')) return;
+            const { error } = await supabase.from('gastos').delete().eq('id', id);
+            if (error) { showConnection('No se pudo eliminar el gasto', true); return; }
+            records = records.filter((record) => record.id !== id);
+            showConnection('Gasto eliminado');
+            render();
+        }
+
+        function openDialog(id) { $(id).hidden = false; }
+        function closeDialog(id) { $(id).hidden = true; }
+
+        async function checkSession() {
+            const { data: { session }, error } = await supabase.auth.getSession();
+            if (error) { showConnection('Error al comprobar sesión', true); return; }
+            if (!session) {
+                $('dashboard').hidden = true;
+                openDialog('login-dialog');
+                showConnection('Inicia sesión para continuar');
+                return;
+            }
+            closeDialog('login-dialog');
+            $('dashboard').hidden = false;
+            $('sign-out').hidden = false;
+            await loadRecords();
+        }
+
+        $('login-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            $('login-message').textContent = '';
+            const { error } = await supabase.auth.signInWithPassword({ email: $('login-email').value, password: $('login-password').value });
+            if (error) { $('login-message').textContent = 'No se pudo iniciar sesión. Comprueba el correo y la contraseña.'; return; }
+            await checkSession();
+        });
+
+        $('sign-out').addEventListener('click', async () => {
+            await supabase.auth.signOut();
+            $('sign-out').hidden = true;
+            $('dashboard').hidden = true;
+            openDialog('login-dialog');
+            showConnection('Sesión cerrada');
+        });
+
+        $('open-expense').addEventListener('click', () => {
+            $('expense-form').reset();
+            $('expense-month').value = `${currentYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+            $('expense-message').textContent = '';
+            openDialog('expense-dialog');
+        });
+        $('cancel-expense').addEventListener('click', () => closeDialog('expense-dialog'));
+        $('year-select').addEventListener('change', render);
+        $('expense-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            $('expense-message').textContent = '';
+            const month = $('expense-month').value;
+            const amount = Number($('expense-amount').value);
+            if (!month || !Number.isFinite(amount) || amount <= 0) { $('expense-message').textContent = 'Indica un mes y un importe válido.'; return; }
+            const { error } = await supabase.from('gastos').insert({
+                mes: `${month}-01`,
+                categoria: $('expense-category').value,
+                importe: amount,
+                frecuencia: $('expense-frequency').value,
+                notas: $('expense-notes').value.trim() || null
+            });
+            if (error) { $('expense-message').textContent = 'No se pudo guardar. Revisa la configuración de Supabase e inténtalo de nuevo.'; console.error('Error al guardar gasto:', error.message); return; }
+            closeDialog('expense-dialog');
+            await loadRecords();
+            $('year-select').value = month.slice(0, 4);
+            render();
+        });
+
+        checkSession();
     </script>
-
 </body>
 </html>
