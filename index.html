@@ -266,12 +266,13 @@
         }
 
         function setupYearOptions() {
+            const selectedYear = Number($('year-select').value) || currentYear();
             const available = new Set();
             for (let year = currentYear() - 1; year <= LAST_ALLOWED_YEAR; year += 1) available.add(year);
             records.forEach((record) => available.add(Number(record.mes.slice(0, 4))));
             const years = [...available].sort((a, b) => b - a);
             $('year-select').replaceChildren(...years.map((year) => new Option(String(year), String(year))));
-            if (!years.includes(Number($('year-select').value))) $('year-select').value = String(currentYear());
+            $('year-select').value = String(years.includes(selectedYear) ? selectedYear : currentYear());
         }
 
         function render() {
